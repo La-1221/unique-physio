@@ -1,0 +1,95 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+* {
+  scroll-behavior: smooth;
+}
+
+body {
+  @apply bg-emerald-900 text-ink font-body antialiased;
+  font-feature-settings: "cv11", "ss01";
+}
+
+.amharic {
+  font-family: "Noto Sans Ethiopic", "Inter", sans-serif;
+}
+
+::selection {
+  background: rgba(20, 199, 146, 0.35);
+  color: #fff;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+}
+::-webkit-scrollbar-track {
+  background: #07120f;
+}
+::-webkit-scrollbar-thumb {
+  background: #14563f;
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #14c792;
+}
+
+/* Visible keyboard focus ring everywhere, accessible */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid #14c792;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+.text-balance {
+  text-wrap: balance;
+}
+
+/* Reusable surface card */
+.card {
+  @apply bg-surface border border-white/5 rounded-2xl;
+}
+
+.btn-primary {
+  @apply inline-flex items-center justify-center gap-2 rounded-full bg-teal text-bg font-semibold px-6 py-3 transition-all hover:bg-teal-light hover:shadow-glow active:scale-95;
+}
+
+.btn-secondary {
+  @apply inline-flex items-center justify-center gap-2 rounded-full border border-white/15 text-ink font-semibold px-6 py-3 transition-all hover:bg-white/5 active:scale-95;
+}
+
+.input-field {
+  @apply w-full bg-surface2 border border-white/10 rounded-xl px-4 py-3 text-ink placeholder:text-dim/60 focus:outline-none focus:border-teal/60 focus:ring-1 focus:ring-teal/40 transition-colors;
+}
+
+.input-field.has-error {
+  @apply border-danger/70 focus:border-danger focus:ring-danger/40;
+}
+
+.field-error {
+  @apply text-danger text-sm mt-1.5;
+}
+
+.label {
+  @apply block text-sm font-medium text-dim mb-1.5;
+}

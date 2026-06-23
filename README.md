@@ -10,22 +10,26 @@ in Ayat, Addis Ababa — public marketing site + role-based clinic management sy
 ## 1. What's included
 
 **Public website**
+
 - Home, Services, About, Contact pages (bilingual English / Amharic, matches the clinic's existing brand colors and copy)
 - Animated hero, scroll-reveal sections, Google Maps embed
 - Public appointment booking form (validates Ethiopian phone numbers, blocks past dates and Sundays)
 
 **Auth system**
+
 - Register / Login with email or phone + password
 - "Continue with Google" (needs your own Google OAuth credentials — see §4)
 - **The very first account ever registered becomes Admin automatically.** Every other self-registration defaults to `patient`.
 - JWT stored in an httpOnly cookie (+ localStorage fallback token for environments that block third-party cookies)
 
 **Role-based dashboards**
+
 - **Admin**: full system overview, analytics (daily/monthly/yearly income & patient charts), patient management, today's outpatients, appointments, and user/role management
 - **Receptionist**: patient intake form, search patients (name / card no / phone), today's check-in dashboard, appointments
 - **Patient**: book appointments, view appointment history, in-app notification bell with reminders
 
 **Core clinic logic**
+
 - Patient package system: a 10-session (or any N-session) package is split into a **Master Package** record and an auto-generated **Session Calendar** (individual dated slots), exactly as scoped.
 - Card numbers auto-generate as `UNPT0001`, `UNPT0002`, …
 - Scheduling frequency rules: Daily (skips Sunday), Every Other Day (Mon/Wed/Fri), Weekly (same weekday) — all Sunday-aware.
@@ -68,58 +72,17 @@ unique-physio/
 ## 3. Running it locally
 
 ### Prerequisites
+
 - Node.js 18+
 - A MongoDB instance — either:
   - Local: install MongoDB Community Server and run `mongod`, or
   - Free cloud: create a free cluster at [MongoDB Atlas](https://www.mongodb.com/cloud/atlas) and copy its connection string
-
-### Setup
-
-```bash
-# 1. Install all dependencies (server + client)
-npm run install:all
-
-# 2. Configure the server
-cp server/.env.example server/.env
-# edit server/.env:
-#   - set MONGO_URI to your local or Atlas connection string
-#   - set JWT_SECRET to any long random string
-#   - (optional for now) set GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET — see §4
-
-# 3. Configure the client
-cp client/.env.example client/.env
-# (optional for now) set VITE_GOOGLE_CLIENT_ID — see §4
-
-# 4. (Optional) seed an admin account + sample patients
-npm run seed
-# creates admin@uniquephysio.com / ChangeMe123! unless you set
-# SEED_ADMIN_EMAIL / SEED_ADMIN_PASSWORD in server/.env first
-
-# 5. Run both apps (in two terminals)
-npm run dev:server   # http://localhost:5000
-npm run dev:client   # http://localhost:5173
-```
-
-Open **http://localhost:5173** — that's the public site. Register your first account (it auto-becomes Admin),
-or log in with the seeded admin credentials above, then visit `/dashboard`.
-
----
 
 ## 4. Setting up Google Sign-In (optional)
 
 Your earlier screenshot showed `Error 401: invalid_client` — that happens when no real OAuth client exists yet.
 The app is built to **work fully without Google Sign-In** (email/phone + password covers 100% of the auth flow);
 Google is an optional convenience on top. To enable it:
-
-1. Go to the [Google Cloud Console → Credentials](https://console.cloud.google.com/apis/credentials)
-2. Create an **OAuth 2.0 Client ID** (Application type: **Web application**)
-3. Add Authorized JavaScript origins:
-   - `http://localhost:5173` (for local dev)
-   - your real domain once deployed (e.g. `https://uniquephysiotherapy.com`)
-4. Copy the generated **Client ID** and **Client Secret**
-5. Paste the Client ID + Secret into `server/.env` → `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`
-6. Paste the same Client ID into `client/.env` → `VITE_GOOGLE_CLIENT_ID`
-7. Restart both dev servers
 
 Until you do this, the "Continue with Google" button on Login/Register will show clearly as disabled with an
 explanation, instead of crashing or silently failing.
@@ -172,12 +135,5 @@ This package is the application code only — it is not pre-deployed. For produc
 
 ## 8. Default test accounts (after running `npm run seed`)
 
-| Role  | Email                     | Password      |
-|-------|----------------------------|---------------|
-| Admin | admin@uniquephysio.com     | ChangeMe123!  |
-
 Two sample patients (Abebe Kebede, Sara Mulugeta) are also seeded with active session packages so you can
 immediately test the "Today's Expected Outpatients" check-in flow if their sessions land on today's date.
-
-**Change the seeded admin password after first login**, or set `SEED_ADMIN_PASSWORD` in `server/.env` before
-seeding.

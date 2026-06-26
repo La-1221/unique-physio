@@ -1,7 +1,7 @@
 import asyncHandler from 'express-async-handler';
 import Session from '../models/Session.js';
 import Patient from '../models/Patient.js';
-import { SESSION_STATUS } from '../config/constants.js';
+import { SESSION_STATUS, SERVICE_PRICES, PAYMENT_METHODS } from '../config/constants.js';
 import { getClinicDayStart, getClinicDayEnd, getNextSlotAfter } from '../utils/ethiopianTime.js';
 
 // @desc    Get "Today's Expected Outpatients" for the front-desk dashboard
@@ -43,9 +43,56 @@ export const checkInSession = asyncHandler(async (req, res) => {
     throw new Error('This patient has no sessions remaining on their package.');
   }
 
+  let sessionServices;
+  let sessionAmount;
+  let sessionPaymentMethod;
+
+  if (patient.paidAllSessions) {
+    // Upfront-paid: set default services, no payment recording
+    sessionServices = ['treatment'];
+    sessionAmount = SERVICE_PRICES.treatment || 0;
+    sessionPaymentMethod = patient.paymentMethod || null;
+  } else {
+    // Per-session payment required
+    const { services, paymentMethod } = req.body;
+    const servicesArr = Array.isArray(services) ? services : (services ? [services] : []);
+
+    if (servicesArr.length === 0) {
+      res.status(400);
+      return res.json({ success: false, message: 'Select at least one service' });
+    }
+    if (servicesArr.includes('evaluation')) {
+      res.status(400);
+      return res.json({ success: false, message: 'Evaluation is only valid on the registration day' });
+    }
+    if (!servicesArr.includes('treatment')) {
+      res.status(400);
+      return res.json({ success: false, message: 'Treatment is required for every session' });
+    }
+    const invalidServices = servicesArr.filter((s) => !Object.keys(SERVICE_PRICES).includes(s));
+    if (invalidServices.length > 0) {
+      res.status(400);
+      return res.json({ success: false, message: `Invalid service: ${invalidServices.join(', ')}` });
+    }
+    if (!paymentMethod || !PAYMENT_METHODS.includes(paymentMethod)) {
+      res.status(400);
+      return res.json({ success: false, message: 'Payment method is required' });
+    }
+
+    sessionServices = servicesArr;
+    sessionAmount = servicesArr.reduce((sum, s) => sum + (SERVICE_PRICES[s] || 0), 0);
+    sessionPaymentMethod = paymentMethod;
+
+    // Increment patient total
+    patient.amount += sessionAmount;
+  }
+
   session.status = SESSION_STATUS.ATTENDED;
   session.checkedInAt = new Date();
   session.checkedInBy = req.user.id;
+  session.services = sessionServices;
+  session.sessionAmount = sessionAmount;
+  session.paymentMethod = sessionPaymentMethod;
   await session.save();
 
   patient.sessionsRemaining = Math.max(0, patient.sessionsRemaining - 1);

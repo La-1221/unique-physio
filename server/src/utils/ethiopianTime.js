@@ -67,13 +67,16 @@ export const isEthiopianSunday = (date) => {
 };
 
 /**
- * Adds `days` calendar days (Ethiopian local) to a date, preserving the
- * same local hour/minute, and returns a real UTC Date.
+ * Adds `days` calendar days to a date and returns a new Date.
+ * Normalizes to noon UTC to avoid DST/timezone boundary issues.
  */
 export const addLocalDays = (date, days) => {
-  const result = new Date(date.getTime());
-  result.setUTCDate(result.getUTCDate() + days);
-  return result;
+  const eat = toEthiopianLocal(date);
+  const y = eat.getUTCFullYear();
+  const m = eat.getUTCMonth();
+  const d = eat.getUTCDate() + days;
+  // Build noon EAT on target day, convert back to UTC
+  return new Date(Date.UTC(y, m, d, 9, 0, 0)); // 09:00 UTC = 12:00 EAT noon
 };
 
 /** Moves a date forward day-by-day until it's not a Sunday. */
@@ -95,7 +98,12 @@ export const skipToNonSunday = (date) => {
  */
 export const generateSessionDates = (startDate, frequency, count) => {
   const dates = [];
-  let cursor = skipToNonSunday(new Date(startDate.getTime()));
+  // Normalize start to noon EAT (09:00 UTC) to avoid timezone boundary issues
+  const eatStart = toEthiopianLocal(startDate);
+  const normalizedStart = new Date(Date.UTC(
+    eatStart.getUTCFullYear(), eatStart.getUTCMonth(), eatStart.getUTCDate(), 9, 0, 0
+  ));
+  let cursor = skipToNonSunday(normalizedStart);
 
   if (frequency === 'daily') {
     while (dates.length < count) {

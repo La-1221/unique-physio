@@ -18,6 +18,7 @@ export const CARD_PREFIX = 'UNPT';
 export const SERVICE_PRICES = {
   evaluation: 1700,
   treatment: 1500,
+  dry_needling: 500,
   cupping: 1200,
 };
 

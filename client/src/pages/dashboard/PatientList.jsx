@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Search, UserPlus, ChevronRight } from 'lucide-react';
 import api from '../../utils/api';
 
 const PatientList = () => {
+  const navigate = useNavigate();
   const [patients, setPatients] = useState([]);
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(true);
@@ -72,7 +73,11 @@ const PatientList = () => {
               </thead>
               <tbody>
                 {patients.map((p) => (
-                  <tr key={p._id} className="border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors">
+                  <tr
+                    key={p._id}
+                    onClick={() => navigate(`/dashboard/patients/${p._id}`)}
+                    className="border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors cursor-pointer"
+                  >
                     <td className="px-5 py-3.5 font-mono text-teal">{p.cardNo}</td>
                     <td className="px-5 py-3.5 font-medium">{p.fullName}</td>
                     <td className="px-5 py-3.5 text-dim">{p.phone}</td>

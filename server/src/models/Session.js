@@ -1,5 +1,7 @@
 import mongoose from 'mongoose';
-import { SESSION_STATUS } from '../config/constants.js';
+import { SESSION_STATUS, PAYMENT_METHODS } from '../config/constants.js';
+
+const SESSION_SERVICES = ['evaluation', 'treatment', 'dry_needling', 'cupping'];
 
 const sessionSchema = new mongoose.Schema(
   {
@@ -33,6 +35,20 @@ const sessionSchema = new mongoose.Schema(
     notes: {
       type: String,
       default: '',
+    },
+    services: {
+      type: [String],
+      enum: SESSION_SERVICES,
+      default: [],
+    },
+    sessionAmount: {
+      type: Number,
+      default: 0,
+    },
+    paymentMethod: {
+      type: String,
+      enum: [...PAYMENT_METHODS, null],
+      default: null,
     },
   },
   { timestamps: true }

@@ -93,3 +93,11 @@ textarea:focus-visible,
 .label {
   @apply block text-sm font-medium text-dim mb-1.5;
 }
+
+@media print {
+  /* Hide everything except the session card content */
+  body > #root > * { display: none; }
+  body > #root .print\:hidden { display: none !important; }
+  /* Allow the card white background to show on print */
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}

@@ -67,9 +67,23 @@ const patientSchema = new mongoose.Schema(
 
     // ---- Package / Session tracking ----
     payFor: {
-      type: String,
-      enum: Object.keys(SERVICE_PRICES), // evaluation | treatment | cupping
+      type: [String],
+      enum: Object.keys(SERVICE_PRICES),
       required: true,
+      validate: {
+        validator: (arr) => Array.isArray(arr) && arr.length > 0,
+        message: 'At least one service must be selected',
+      },
+    },
+    // Single service charged for each follow-up session (session 2, 3, ...)
+    perSessionService: {
+      type: String,
+      enum: [...Object.keys(SERVICE_PRICES), null],
+      default: 'treatment',
+    },
+    paidAllSessions: {
+      type: Boolean,
+      default: false,
     },
     totalSessions: {
       type: Number,

@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { AlertCircle, Eye, EyeOff } from "lucide-react";
 import Logo from "../components/Logo";
 import GoogleButton from "../components/GoogleButton";
+import Home from "./Home";
 import { useAuth } from "../context/AuthContext";
 import {
   isValidEthiopianPhone,
@@ -246,6 +247,14 @@ const Register = () => {
             >
               Log in
             </Link>
+            <p>
+              <button
+                className="text-teal hover:text-teal-light"
+                onClick={() => navigate(-2)}
+              >
+                ← Go Back
+              </button>
+            </p>
           </p>
         </div>
       </div>

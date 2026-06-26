@@ -265,8 +265,16 @@ const Login = () => {
               to="/register"
               className="text-teal hover:text-teal-light font-medium"
             >
-              Create one
+              Create new account
             </Link>
+            <p>
+              <button
+                className="text-teal hover:text-teal-light"
+                onClick={() => navigate(-1)}
+              >
+                ← Go Back
+              </button>
+            </p>
           </p>
         </div>
       </div>

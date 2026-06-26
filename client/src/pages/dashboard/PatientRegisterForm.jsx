@@ -4,7 +4,7 @@ import { AlertCircle, CheckCircle2, Save } from 'lucide-react';
 import api from '../../utils/api';
 import { isValidEthiopianPhone, normalizeEthiopianPhone, formatETB } from '../../utils/validation';
 
-const SERVICE_PRICES = { evaluation: 1700, treatment: 1500, cupping: 1200 };
+const SERVICE_PRICES = { evaluation: 1700, treatment: 1500, dry_needling: 500, cupping: 1200 };
 const PAYMENT_METHODS = [
   { value: 'cash', label: 'Cash' },
   { value: 'telebirr', label: 'Telebirr' },
@@ -18,9 +18,12 @@ const FREQUENCIES = [
 ];
 
 const initialForm = {
-  fullName: '', startDay: new Date().toISOString().slice(0, 10), phone: '', sex: '', age: '',
-  physiotherapist: '', diagnosis: '', sessions: 10, address: '', branch: '',
-  payFor: 'treatment', amount: SERVICE_PRICES.treatment, paymentMethod: '', frequency: 'daily',
+  fullName: '', startDay: new Date().toISOString().slice(0, 10),
+  phone: '', sex: '', age: '', physiotherapist: '', diagnosis: '',
+  sessions: 10, address: '', branch: '', frequency: 'daily',
+  payFor: ['evaluation'],
+  paidAllSessions: false,
+  paymentMethod: '',
 };
 
 const PatientRegisterForm = () => {
@@ -33,13 +36,29 @@ const PatientRegisterForm = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setForm((f) => {
-      const next = { ...f, [name]: value };
-      if (name === 'payFor') next.amount = SERVICE_PRICES[value];
-      return next;
-    });
+    let finalValue = value;
+    // Auto-advance Sunday to Monday on start day picker
+    if (name === 'startDay' && value) {
+      const picked = new Date(value);
+      if (picked.getDay() === 0) {
+        picked.setDate(picked.getDate() + 1);
+        finalValue = picked.toISOString().slice(0, 10);
+      }
+    }
+    setForm((f) => ({ ...f, [name]: finalValue }));
     setErrors((errs) => ({ ...errs, [name]: undefined }));
     setServerError('');
+  };
+
+  const handleServiceToggle = (serviceId) => {
+    if (serviceId === 'evaluation') return; // evaluation is locked
+    setForm((f) => {
+      const newPayFor = f.payFor.includes(serviceId)
+        ? f.payFor.filter((s) => s !== serviceId)
+        : [...f.payFor, serviceId];
+      return { ...f, payFor: newPayFor };
+    });
+    setErrors((errs) => ({ ...errs, payFor: undefined }));
   };
 
   const validate = () => {
@@ -52,6 +71,7 @@ const PatientRegisterForm = () => {
     if (!form.diagnosis.trim()) errs.diagnosis = 'Diagnosis is required';
     if (!form.address.trim()) errs.address = 'Address is required';
     if (!form.sessions || form.sessions < 1) errs.sessions = 'Sessions must be at least 1';
+    if (!form.payFor.includes('evaluation')) errs.payFor = 'Evaluation is required on registration day';
     if (!form.paymentMethod) errs.paymentMethod = 'Select a payment method';
     setErrors(errs);
     return Object.keys(errs).length === 0;
@@ -68,7 +88,8 @@ const PatientRegisterForm = () => {
         phone: normalizeEthiopianPhone(form.phone),
         age: Number(form.age),
         sessions: Number(form.sessions),
-        amount: Number(form.amount),
+        paidAllSessions: form.paidAllSessions,
+        perSessionService: 'treatment',
       });
       setSuccess(data.patient);
       setForm(initialForm);
@@ -80,6 +101,14 @@ const PatientRegisterForm = () => {
       setSubmitting(false);
     }
   };
+
+  // Derived payment values — perSessionService is always 'treatment'
+  const regAmount = form.payFor.reduce((s, id) => s + (SERVICE_PRICES[id] || 0), 0);
+  const perSessionPrice = SERVICE_PRICES['treatment'];
+  const remainingSessions = Math.max(0, Number(form.sessions) - 1);
+  const totalAmount = form.paidAllSessions
+    ? regAmount + perSessionPrice * remainingSessions
+    : regAmount;
 
   if (success) {
     return (
@@ -112,6 +141,7 @@ const PatientRegisterForm = () => {
       )}
 
       <form onSubmit={handleSubmit} noValidate className="space-y-7">
+        {/* Patient Details */}
         <section className="card p-6">
           <p className="font-semibold mb-5">Patient Details</p>
           <div className="grid sm:grid-cols-2 gap-4">
@@ -122,7 +152,8 @@ const PatientRegisterForm = () => {
             </div>
             <div>
               <label className="label">Start Day</label>
-              <input name="startDay" type="date" value={form.startDay} onChange={handleChange} className="input-field" />
+              <input name="startDay" type="date" value={form.startDay} onChange={handleChange} className={`input-field ${errors.startDay ? 'has-error' : ''}`} />
+              {errors.startDay && <p className="field-error">{errors.startDay}</p>}
             </div>
             <div>
               <label className="label">Phone Number</label>
@@ -165,6 +196,7 @@ const PatientRegisterForm = () => {
           </div>
         </section>
 
+        {/* Package & Scheduling */}
         <section className="card p-6">
           <p className="font-semibold mb-5">Package & Scheduling</p>
           <div className="grid sm:grid-cols-2 gap-4">
@@ -182,24 +214,64 @@ const PatientRegisterForm = () => {
           </div>
         </section>
 
+        {/* Payment */}
         <section className="card p-6">
           <p className="font-semibold mb-5">Payment</p>
-          <div className="grid sm:grid-cols-2 gap-4">
+          <div className="space-y-5">
+
+            {/* Registration day services */}
             <div>
-              <label className="label">Pay For</label>
-              <select name="payFor" value={form.payFor} onChange={handleChange} className="input-field">
-                <option value="evaluation">Evaluation — {formatETB(SERVICE_PRICES.evaluation)}</option>
-                <option value="treatment">Treatment — {formatETB(SERVICE_PRICES.treatment)}</option>
-                <option value="cupping">Cupping — {formatETB(SERVICE_PRICES.cupping)}</option>
-              </select>
+              <label className="label mb-2 block">Registration Day — Services</label>
+              <p className="text-xs text-dim mb-3">Evaluation is always required. Add Dry Needling or Cupping if performed.</p>
+              <div className="space-y-2">
+                {/* Evaluation — locked */}
+                <label className="flex items-center gap-3 p-3 border border-teal rounded-lg bg-teal/10 cursor-not-allowed opacity-80">
+                  <input type="checkbox" checked readOnly disabled className="w-4 h-4 rounded text-teal bg-transparent border-white/30" />
+                  <span className="flex-1 text-sm">Evaluation</span>
+                  <span className="text-xs text-teal font-medium">Required</span>
+                </label>
+                {/* Dry Needling — optional add-on */}
+                {[{ id: 'dry_needling', label: 'Dry Needling' }, { id: 'cupping', label: 'Cupping' }].map((s) => (
+                  <label key={s.id} className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-colors ${form.payFor.includes(s.id) ? 'border-teal bg-teal/10' : 'border-white/10 hover:bg-white/5'}`}>
+                    <input
+                      type="checkbox"
+                      checked={form.payFor.includes(s.id)}
+                      onChange={() => handleServiceToggle(s.id)}
+                      className="w-4 h-4 rounded text-teal bg-transparent border-white/30 focus:ring-teal"
+                    />
+                    <span className="flex-1 text-sm">{s.label}</span>
+                    <span className="text-xs text-dim">Optional</span>
+                  </label>
+                ))}
+              </div>
+              {errors.payFor && <p className="field-error">{errors.payFor}</p>}
             </div>
+
+            {/* Pay all sessions upfront toggle */}
+            <label className={`flex items-center gap-3 p-4 border rounded-xl cursor-pointer transition-colors ${form.paidAllSessions ? 'border-teal bg-teal/10' : 'border-white/10 hover:bg-white/5'}`}>
+              <input
+                type="checkbox"
+                checked={form.paidAllSessions}
+                onChange={(e) => setForm((f) => ({ ...f, paidAllSessions: e.target.checked }))}
+                className="w-4 h-4 rounded text-teal bg-transparent border-white/30 focus:ring-teal"
+              />
+              <div>
+                <p className="text-sm font-semibold">Pay all {form.sessions || ''} sessions upfront</p>
+                <p className="text-xs text-dim mt-0.5">
+                  Registration ({formatETB(regAmount)}) + {remainingSessions} sessions × {formatETB(perSessionPrice)} = {formatETB(totalAmount)}
+                </p>
+              </div>
+            </label>
+
+            {/* Amount summary */}
+            <div className="p-4 bg-teal/10 border border-teal/30 rounded-xl flex justify-between items-center">
+              <span className="text-sm font-semibold">Amount to collect now</span>
+              <span className="text-2xl font-bold text-teal">{formatETB(totalAmount)}</span>
+            </div>
+
+            {/* Payment Method */}
             <div>
-              <label className="label">Amount (ETB)</label>
-              <input name="amount" type="number" min="0" value={form.amount} onChange={handleChange} className="input-field" />
-              <p className="text-xs text-dim mt-1.5">Defaults to standard price; adjust if a custom package rate applies.</p>
-            </div>
-            <div className="sm:col-span-2">
-              <label className="label">Payment Method</label>
+              <label className="label mb-2 block">Payment Method</label>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {PAYMENT_METHODS.map((m) => (
                   <label key={m.value} className={`flex items-center justify-center gap-2 rounded-xl border px-3 py-2.5 text-sm cursor-pointer transition-colors ${form.paymentMethod === m.value ? 'border-teal bg-teal/10 text-teal' : 'border-white/10 text-dim hover:border-white/25'}`}>
